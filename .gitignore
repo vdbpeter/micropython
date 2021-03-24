@@ -42,3 +42,9 @@ user.props
 # Generated rst files
 ######################
 genrst/
+
+# Linked directories
+####################
+lib/asf4
+lib/tinyusb
+
