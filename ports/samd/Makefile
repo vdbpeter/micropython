@@ -72,6 +72,7 @@ SRC_C = \
 	moduos.c \
 	modutime.c \
 	modmachine.c \
+	machine_pin.c \
 	modsamd.c \
 	samd_flash.c \
 	mphalport.c \
@@ -109,7 +110,7 @@ SRC_S = lib/utils/gchelper_m3.s
 endif
 
 # List of sources for qstr extraction
-SRC_QSTR += moduos.c modutime.c modmachine.c modsamd.c samd_flash.c 
+SRC_QSTR += moduos.c modutime.c modmachine.c machine_pin.c modsamd.c samd_flash.c 
 #SRC_QSTR += moduos.c modutime.c modmachine.c modsamd.c samd_flash.c lib/utils/sys_stdio_mphal.c
 
 
