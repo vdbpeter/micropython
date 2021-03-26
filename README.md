@@ -1,10 +1,14 @@
-[![CI badge](https://github.com/micropython/micropython/workflows/unix%20port/badge.svg)](https://github.com/micropython/micropython/actions?query=branch%3Amaster+event%3Apush) [![Coverage badge](https://coveralls.io/repos/micropython/micropython/badge.png?branch=master)](https://coveralls.io/r/micropython/micropython?branch=master)
+I'm working on the SAMD Port of Micropython. It's slow going....
+Currently, this fork should compile ok (as long as you've built the cross-compile, 
+and pulled down the "circuitpython" branch of the adf4) for the SAMD21 (tested on 
+Seeed XIAO M0) & SAMD51 (tested on Adafruit ItsyBitsy M4).
+
+Stuff that's working:
+* Internal modules and functions
+* Internal Flash 64k Block Device (samd.Flash() initialised in frozen module '_boot.py'.)
 
 The MicroPython project
 =======================
-<p align="center">
-  <img src="https://raw.githubusercontent.com/micropython/micropython/master/logo/upython-with-micro.jpg" alt="MicroPython Logo"/>
-</p>
 
 This is the MicroPython project, which aims to put an implementation
 of Python 3.x on microcontrollers and small embedded systems.
