@@ -5,7 +5,7 @@ Seeed XIAO M0) & SAMD51 (tested on Adafruit ItsyBitsy M4).
 
 Stuff that's working:
 * Internal modules and functions
-* Internal Flash 64k Block Device (samd.Flash() initialised in frozen module '_boot.py'.)
+* Internal Flash 64k Block Device (samd.Flash() initialised with littlefs1 in frozen module '_boot.py'.)
 
 The MicroPython project
 =======================
