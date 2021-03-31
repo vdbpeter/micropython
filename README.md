@@ -5,7 +5,9 @@ Seeed XIAO M0) & SAMD51 (tested on Adafruit ItsyBitsy M4).
 
 Stuff that's working:
 * Internal modules and functions
-* Internal Flash 64k Block Device (samd.Flash() initialised with littlefs1 in frozen module '_boot.py'.)
+* Internal Flash Block Device (samd.Flash() initialised with littlefs1 in frozen module '_boot.py'.)
+* Block size is set in ports/samd/boards/<board>/mpconfigboard.h (XIAO_M0: 0xFFFF; not set for any 
+  other device yet, but intend to give a larger size to devices with more Flash eg 0x1FFFF for the M4) 
 
 The MicroPython project
 =======================
