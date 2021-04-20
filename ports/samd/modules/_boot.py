@@ -8,8 +8,6 @@ import samd
 samd.Flash.flash_init()
 bdev = samd.Flash()
 
-print("Welcome to Peter's build!")
-
 # Try to mount the filesystem, and format the flash if it doesn't exist.
 try:
     vfs = uos.VfsLfs1(bdev)
