@@ -47,6 +47,7 @@ INC += -I$(TOP)/lib/asf4/$(MCU_SERIES_LOWER)/hpl/port
 INC += -I$(TOP)/lib/asf4/$(MCU_SERIES_LOWER)/hpl/rtc
 INC += -I$(TOP)/lib/asf4/$(MCU_SERIES_LOWER)/hpl/tc
 INC += -I$(TOP)/lib/asf4/$(MCU_SERIES_LOWER)/include
+INC += -I$(TOP)/lib/asf4/$(MCU_SERIES_LOWER)/include/pio
 INC += -I$(TOP)/lib/tinyusb/src
 
 CFLAGS_MCU_SAMD21 = -mtune=cortex-m0plus -mcpu=cortex-m0plus -msoft-float
@@ -72,7 +73,9 @@ SRC_C = \
 	moduos.c \
 	modutime.c \
 	modmachine.c \
+        $(BOARD_DIR)/pins.c \
 	machine_pin.c \
+	machine_led.c \
 	modsamd.c \
 	samd_flash.c \
 	mphalport.c \
@@ -96,8 +99,9 @@ SRC_C = \
 	lib/utils/printf.c \
 	lib/utils/pyexec.c \
 	lib/utils/stdout_helpers.c \
-        lib/utils/sys_stdio_mphal.c \
+	lib/utils/sys_stdio_mphal.c \
 	lib/asf4/$(MCU_SERIES_LOWER)/hal/src/hal_flash.c \
+	lib/asf4/$(MCU_SERIES_LOWER)/hal/src/hal_atomic.c \
 	lib/asf4/$(MCU_SERIES_LOWER)/hpl/nvmctrl/hpl_nvmctrl.c \
 
 
@@ -110,11 +114,14 @@ SRC_S = lib/utils/gchelper_m3.s
 endif
 
 # List of sources for qstr extraction
-SRC_QSTR += moduos.c modutime.c modmachine.c machine_pin.c modsamd.c samd_flash.c 
-#SRC_QSTR += moduos.c modutime.c modmachine.c modsamd.c samd_flash.c lib/utils/sys_stdio_mphal.c
+SRC_QSTR += moduos.c \
+            modutime.c \
+            modmachine.c \
+            machine_pin.c \
+            machine_led.c \
+            modsamd.c \
+            samd_flash.c 
 
-
-# samd_flash.c
 
 OBJ += $(PY_O)
 OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
