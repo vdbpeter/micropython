@@ -61,6 +61,7 @@ void mp_hal_delay_us(mp_uint_t us) {
     }
 }
 
+
 int mp_hal_stdin_rx_chr(void) {
     for (;;) {
         if (USARTx->USART.INTFLAG.bit.RXC) {
