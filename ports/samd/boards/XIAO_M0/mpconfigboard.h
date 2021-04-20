@@ -9,7 +9,10 @@
 #define MICROPY_HW_FLASH_STORAGE_BYTES      (0xFFFF) 
 #define VFS_BLOCK_SIZE_BYTES                (1536) //
 
-//2/2/21 from CircuitPython
-#define DEFAULT_I2C_BUS_SCL (&pin_PA09) // was PA23
-#define DEFAULT_I2C_BUS_SDA (&pin_PA08) // was PA22
+// ASF4 MCU package specific Pin definitions
+#include "samd21g18a.h"
+
+//2/2/21 from CircuitPython- not yet built...
+//#define DEFAULT_I2C_BUS_SCL (&pin_PA09) // was PA23
+//#define DEFAULT_I2C_BUS_SDA (&pin_PA08) // was PA22
 
