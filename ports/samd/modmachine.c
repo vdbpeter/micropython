@@ -34,18 +34,11 @@
 //#include "atmel_start_pins.h"
 //#include "peripheral_clk_config.h"
 //#include "hal/include/hal_delay.h"
-//#include "hal/include/hal_flash.h"
 //#include "hal/include/hal_gpio.h"
 #include "hal_flash.h"
-#if defined(MCU_SAMD21)
-#include "lib/asf4/samd21/hal/include/hal_init.h"
-#include "lib/asf4/samd21/hpl/gclk/hpl_gclk_base.h"
-#include "lib/asf4/samd21/hpl/pm/hpl_pm_base.h"
-#elif defined(MCU_SAMD51)
-#include "lib/asf4/samd51/hal/include/hal_init.h"
-#include "lib/asf4/samd51/hpl/gclk/hpl_gclk_base.h"
-#include "lib/asf4/samd51/hpl/pm/hpl_pm_base.h"
-#endif
+#include "hal_init.h"
+#include "hpl_gclk_base.h"
+#include "hpl_pm_base.h"
 
 #if defined(MCU_SAMD21)
 #define DBL_TAP_ADDR ((volatile uint32_t *)(0x20000000 + 32 * 1024 - 4))
@@ -132,7 +125,7 @@ STATIC const mp_rom_map_elem_t machine_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_mem32),               MP_ROM_PTR(&machine_mem32_obj) },
     { MP_ROM_QSTR(MP_QSTR_unique_id),           MP_ROM_PTR(&machine_unique_id_obj) },
     { MP_ROM_QSTR(MP_QSTR_Pin),                 MP_ROM_PTR(&machine_pin_type) },
-    { MP_ROM_QSTR(MP_QSTR_led),                 MP_ROM_PTR(&machine_led_type) },
+    { MP_ROM_QSTR(MP_QSTR_Led),                 MP_ROM_PTR(&machine_led_type) },
 };
 STATIC MP_DEFINE_CONST_DICT(machine_module_globals, machine_module_globals_table);
 
