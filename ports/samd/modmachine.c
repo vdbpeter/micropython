@@ -83,6 +83,21 @@ Atmel SAM D21E / SAM D21G / SAM D21J
 SMART ARM-Based Microcontroller
 DATASHEET
 9.6 (SAMD51) or 9.3.3 (or 10.3.3 depending on which manual)(SAMD21) Serial Number
+
+EXAMPLE (SAMD21)
+----------------
+OpenOCD:
+Word0:
+> at91samd21g18.cpu mdw 0x0080A00C 1
+0x0080a00c: 6e27f15f
+Words 1-3:
+> at91samd21g18.cpu mdw 0x0080A040 3
+0x0080a040: 50534b54 332e3120 ff091645
+
+MicroPython (this code and same order as shown in Arduino IDE)
+>>> ubinascii.hexlify(machine.unique_id())
+b'6e27f15f50534b54332e3120ff091645'
+
 */
 
     #if defined(MCU_SAMD21)
@@ -117,6 +132,7 @@ STATIC const mp_rom_map_elem_t machine_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_mem32),               MP_ROM_PTR(&machine_mem32_obj) },
     { MP_ROM_QSTR(MP_QSTR_unique_id),           MP_ROM_PTR(&machine_unique_id_obj) },
     { MP_ROM_QSTR(MP_QSTR_Pin),                 MP_ROM_PTR(&machine_pin_type) },
+    { MP_ROM_QSTR(MP_QSTR_led),                 MP_ROM_PTR(&machine_led_type) },
 };
 STATIC MP_DEFINE_CONST_DICT(machine_module_globals, machine_module_globals_table);
 
