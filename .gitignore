@@ -48,3 +48,4 @@ genrst/
 lib/asf4
 lib/tinyusb
 
+.gitmodules
