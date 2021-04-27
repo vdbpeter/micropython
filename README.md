@@ -1,10 +1,21 @@
-[![CI badge](https://github.com/micropython/micropython/workflows/unix%20port/badge.svg)](https://github.com/micropython/micropython/actions?query=branch%3Amaster+event%3Apush) [![Coverage badge](https://coveralls.io/repos/micropython/micropython/badge.png?branch=master)](https://coveralls.io/r/micropython/micropython?branch=master)
+I'm working on the SAMD Port of Micropython. It's slow going....
+Currently, this fork should compile ok (as long as you've built the cross-compile, 
+and pulled down the "circuitpython" branch of the adf4).
+
+Added these Boards to the Port:
+* Seeed XIAO_M0 (SAMD21G18A)
+* Seeed WIO Terminal D51 (SAMD51P19A).
+
+Stuff that's working:
+* Internal modules and functions
+* Internal Flash Block Device (samd.Flash() initialised with littlefs1 in frozen module '_boot.py'.)
+* Block Device size is set in ports/samd/boards/<board>/mpconfigboard.h (XIAO_M0: 0xFFFF and 0x1FFFF for the M4's) 
+* machine.Pin() class. Only GPIO methods & functions (IN, OUT etc) at this stage. Each board has its own pin numbering scheme, so please see boards/<board>/pins.c for pin numbers referenced by 'Pin'. EG; XIAO_M0/pins.c: {{&machine_pin_type}, PIN_PA02}, // A0/D0 means MicroPython Pin(0) is XIAO pin "A0/D0" on SAMD21G18A PortA,Pin2.
+* machine.led() class. OUT only. As above, please see boards/<board>/pins.c for pin numbers referenced by 'led'. EG; XIAO_M0/pins.c: {{&machine_led_type}, PIN_PA17}, // W13 means     MicroPython led(0) is XIAO led "W13" connected to SAMD21G18A PortA,Pin17.
+
 
 The MicroPython project
 =======================
-<p align="center">
-  <img src="https://raw.githubusercontent.com/micropython/micropython/master/logo/upython-with-micro.jpg" alt="MicroPython Logo"/>
-</p>
 
 This is the MicroPython project, which aims to put an implementation
 of Python 3.x on microcontrollers and small embedded systems.

@@ -1,5 +1,5 @@
-#define MICROPY_HW_BOARD_NAME "ItsyBitsy M4 Express"
-#define MICROPY_HW_MCU_NAME   "SAMD51G19A"
+#define MICROPY_HW_BOARD_NAME "Wio Terminal D51R"
+#define MICROPY_HW_MCU_NAME   "SAMD51P19A"
 
 #define MICROPY_FLOAT_IMPL              (MICROPY_FLOAT_IMPL_FLOAT)
 #define MICROPY_PY_BUILTINS_COMPLEX     (0)
@@ -15,5 +15,5 @@
 #define VFS_BLOCK_SIZE_BYTES                (1536) //
 
 // ASF4 MCU package specific Pin definitions
-#include "samd51g19a.h"
+#include "samd51p19a.h"
 
