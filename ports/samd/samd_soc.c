@@ -22,6 +22,9 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
+ *
+ * IMPORTANT: Please refer to "I/O Multiplexing and Considerations" chapters 
+ *            in device datasheets for I/O Pin functions and assignments.
  */
 
 #include "samd_soc.h"
@@ -30,18 +33,21 @@
 static void uart0_init(void) {
     #if defined(MCU_SAMD21)
 
-    // SERCOM0, TX=PA06=PAD2, RX=PA07=PAD3, ALT-D
-    PORT->Group[0].PMUX[3].reg = 0x33;
-    PORT->Group[0].PINCFG[6].reg = 1;
-    PORT->Group[0].PINCFG[7].reg = 1;
+    // SERCOM0, TX=PA06=PAD2, RX=PA07=PAD3,PMUX[3] - *WORKS (orig- for unknown board)
 
-    PM->APBCMASK.bit.SERCOM0_ = 1;
-    GCLK->CLKCTRL.reg = GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID_SERCOM0_CORE;
+    // XIAO_M0 Tx/Rx pin assignments PB8=A6, PB9=A7. USARTx (SERCOM4) set in samd_soc.h
+    PORT->Group[1].PINCFG[8].bit.PMUXEN = 1; // Enable
+    PORT->Group[1].PINCFG[9].bit.PMUXEN = 1; // Enable
+    PORT->Group[1].PMUX[4].bit.PMUXE = 0x03; // Alt Func: C=2,D=3
+    PORT->Group[1].PMUX[4].bit.PMUXO = 0x03;
+
+    PM->APBCMASK.bit.SERCOM4_ = 1; 
+    GCLK->CLKCTRL.reg = GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID_SERCOM4_CORE;
     while (GCLK->STATUS.bit.SYNCBUSY) {
     }
 
-    uint32_t rxpo = 3;
-    uint32_t txpo = 1;
+    uint32_t rxpo = 1; // 1=Pad1,3=Pad3 Rx data
+    uint32_t txpo = 0; // 0=pad0,1=Pad2 Tx data
 
     #elif defined(MCU_SAMD51)
 
@@ -54,24 +60,24 @@ static void uart0_init(void) {
     GCLK->PCHCTRL[SERCOM3_GCLK_ID_CORE].reg = GCLK_PCHCTRL_CHEN | GCLK_PCHCTRL_GEN_GCLK0;
     MCLK->APBBMASK.bit.SERCOM3_ = 1;
 
-    uint32_t rxpo = 1;
-    uint32_t txpo = 2;
+    uint32_t rxpo = 1; // Pad 1 for Rx data
+    uint32_t txpo = 2; // Pad 0 for TX data
 
     #endif
 
     while (USARTx->USART.SYNCBUSY.bit.SWRST) {
     }
-    USARTx->USART.CTRLA.bit.SWRST = 1;
+    USARTx->USART.CTRLA.bit.SWRST = 1; // Reset all Registers, disable peripheral
     while (USARTx->USART.SYNCBUSY.bit.SWRST) {
     }
 
     USARTx->USART.CTRLA.reg =
-        SERCOM_USART_CTRLA_DORD
-        | SERCOM_USART_CTRLA_RXPO(rxpo)
-        | SERCOM_USART_CTRLA_TXPO(txpo)
-        | SERCOM_USART_CTRLA_MODE(1)
+        SERCOM_USART_CTRLA_DORD // Data order
+        | SERCOM_USART_CTRLA_RXPO(rxpo) // Set Pad#
+        | SERCOM_USART_CTRLA_TXPO(txpo) // Set Pad#
+        | SERCOM_USART_CTRLA_MODE(1) // USART with internal clock
     ;
-    USARTx->USART.CTRLB.reg = SERCOM_USART_CTRLB_RXEN | SERCOM_USART_CTRLB_TXEN;
+    USARTx->USART.CTRLB.reg = SERCOM_USART_CTRLB_RXEN | SERCOM_USART_CTRLB_TXEN; // Enable Rx & Tx
     while (USARTx->USART.SYNCBUSY.bit.CTRLB) {
     }
     #if CPU_FREQ == 8000000
@@ -81,8 +87,8 @@ static void uart0_init(void) {
     #elif CPU_FREQ == 120000000
     uint32_t baud = 64529; // 115200 baud; 65536*(1 - 16 * 115200/120e6)
     #endif
-    USARTx->USART.BAUD.bit.BAUD = baud;
-    USARTx->USART.CTRLA.bit.ENABLE = 1;
+    USARTx->USART.BAUD.bit.BAUD = baud; // Set Baud
+    USARTx->USART.CTRLA.bit.ENABLE = 1; // Enable the peripheral
     while (USARTx->USART.SYNCBUSY.bit.ENABLE) {
     }
 }
