@@ -29,18 +29,6 @@
 #include <stdint.h>
 #include "sam.h"
 
-#if defined(MCU_SAMD21)
-
-#define CPU_FREQ (48000000)
-#define USARTx SERCOM4 // SERCOM0 default, SERCOM4:XIAO_M0 tx/rx
-
-#elif defined(MCU_SAMD51)
-
-#define CPU_FREQ (48000000)
-#define USARTx SERCOM3 // SERCOM3: WIO_Terminal
-
-#endif
-
 void samd_init(void);
 void samd_main(void);
 
