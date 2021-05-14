@@ -30,7 +30,6 @@ const char samd_help_text[] =
     "Welcome to MicroPython!\n"
     "\n"
     "For online docs please visit http://docs.micropython.org/en/latest/samd/ .\n"
-    "For diagnostic information to include in bug reports execute 'import port_diag'.\n"
     "\n"
     "Control commands:\n"
     "  CTRL-A        -- on a blank line, enter raw REPL mode\n"
