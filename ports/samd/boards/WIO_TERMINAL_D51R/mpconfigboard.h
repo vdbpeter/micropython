@@ -12,7 +12,7 @@
 // 512*1024= 0x80000 minus 128*1024= 0x20000 =  0x60000
 #define MICROPY_HW_FLASH_STORAGE_BASE       (0x60000)
 #define MICROPY_HW_FLASH_STORAGE_BYTES      (0x1FFFF)
-#define VFS_BLOCK_SIZE_BYTES                (1536) //
+#define VFS_BLOCK_SIZE_BYTES                (1536) // 24x 64B flash pages;
 
 // ASF4 MCU package specific Pin definitions
 #include "samd51p19a.h"
