@@ -42,36 +42,25 @@
 #include "hpl_gpio.h"
 #include "hal_atomic.h"
 
-#define GPIO_MODE_IN (0)
+
 #define GPIO_MODE_OUT (1)
-#define GPIO_MODE_OPEN_DRAIN (2)
-#define GPIO_MODE_ALT (3)
 
-// asf4 hpl_gpio.h gpio_pull_mode
-//#define GPIO_PULL_OFF (0) // 0 = None
-#define GPIO_PULL_UP (1)
-#define GPIO_PULL_DOWN (2)
-
-#define GPIO_IRQ_ALL (0xf)
 
 // Macros to access the state of the hardware.
-#define GPIO_GET_FUNCSEL(id) ((iobank0_hw->io[(id)].ctrl & IO_BANK0_GPIO0_CTRL_FUNCSEL_BITS) >> IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB)
-#define GPIO_IS_OUT(id) (sio_hw->gpio_oe & (1 << (id)))
-#define GPIO_IS_PULL_UP(id) (padsbank0_hw->io[(id)] & PADS_BANK0_GPIO0_PUE_BITS)
-#define GPIO_IS_PULL_DOWN(id) (padsbank0_hw->io[(id)] & PADS_BANK0_GPIO0_PDE_BITS)
 
-// Open drain behaviour is simulated.
-#define GPIO_IS_OPEN_DRAIN(id) (machine_pin_open_drain_mask & (1 << (id)))
+STATIC void machine_led_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    machine_led_obj_t *self = self_in;
+    mp_printf(print, "Pin(%u)", self->id);
+}
 
 // pin.init(mode, pull=None, *, value=None, alt=FUNC_SIO)
 STATIC mp_obj_t machine_led_obj_init_helper(const machine_led_obj_t *self, size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_mode, ARG_pull, ARG_value, ARG_alt };
+    enum { ARG_mode, ARG_value};
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_mode, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE}},
-        { MP_QSTR_pull, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE}},
         { MP_QSTR_value, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE}},
     };
-        //{ MP_QSTR_alt, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = GPIO_FUNC_SIO}},
 
     // parse args
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -83,8 +72,7 @@ STATIC mp_obj_t machine_led_obj_init_helper(const machine_led_obj_t *self, size_
     }
 
     // configure mode
-    mp_hal_pin_output(self->id);
-
+    gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
 
     return mp_const_none;
 }
@@ -132,18 +120,13 @@ STATIC mp_obj_t machine_led_call(mp_obj_t self_in, size_t n_args, size_t n_kw, c
     } else {
         // set pin
         bool value = mp_obj_is_true(args[0]);
-        if (GPIO_IS_OPEN_DRAIN(self->id)) {
-            // PvdB. Creates compilation error. Don't know what it does (see RP2)
-            //MP_STATIC_ASSERT(GPIO_DIRECTION_IN == 0 && GPIO_DIRECTION_OUT == 1);
-            gpio_set_pin_direction(self->id, 1 - value);
-        } else {
-            gpio_set_pin_level(self->id, value);
-        }
+        gpio_set_pin_level(self->id, value);
+        
         return mp_const_none;
     }
 }
 
-// pin.init(mode, pull)
+// pin.init(mode)
 STATIC mp_obj_t machine_led_obj_init(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     return machine_led_obj_init_helper(args[0], n_args - 1, args + 1, kw_args);
 }
@@ -160,13 +143,7 @@ STATIC mp_obj_t machine_led_low(mp_obj_t self_in) {
     machine_led_obj_t *self = MP_OBJ_TO_PTR(self_in);
     gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
     gpio_set_pin_level(self->id, false);
-/*
-    if (GPIO_IS_OPEN_DRAIN(self->id)) {
-        gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
-    } else {
-        gpio_clr_mask(1u << self->id);
-    }
-*/
+
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_led_low_obj, machine_led_low);
@@ -176,13 +153,7 @@ STATIC mp_obj_t machine_led_high(mp_obj_t self_in) {
     machine_led_obj_t *self = MP_OBJ_TO_PTR(self_in);
     gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
     gpio_set_pin_level(self->id, true);
-/*
-    if (GPIO_IS_OPEN_DRAIN(self->id)) {
-        gpio_set_pin_direction(self->id, GPIO_DIRECTION_IN);
-    } else {
-        gpio_set_mask(1u << self->id);
-    }
-*/
+
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_led_high_obj, machine_led_high);
@@ -200,25 +171,23 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_led_toggle_obj, machine_led_toggle);
 
 STATIC const mp_rom_map_elem_t machine_led_locals_dict_table[] = {
     // instance methods
-    //{ MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&machine_led_init_obj) },
+    { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&machine_led_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_value), MP_ROM_PTR(&machine_led_value_obj) },
     { MP_ROM_QSTR(MP_QSTR_low), MP_ROM_PTR(&machine_led_low_obj) },
     { MP_ROM_QSTR(MP_QSTR_high), MP_ROM_PTR(&machine_led_high_obj) },
     { MP_ROM_QSTR(MP_QSTR_off), MP_ROM_PTR(&machine_led_low_obj) },
     { MP_ROM_QSTR(MP_QSTR_on), MP_ROM_PTR(&machine_led_high_obj) },
     { MP_ROM_QSTR(MP_QSTR_toggle), MP_ROM_PTR(&machine_led_toggle_obj) },
-    //{ MP_ROM_QSTR(MP_QSTR_irq), MP_ROM_PTR(&machine_led_irq_obj) },
 
     // class constants
     { MP_ROM_QSTR(MP_QSTR_OUT), MP_ROM_INT(GPIO_MODE_OUT) },
-    //{ MP_ROM_QSTR(MP_QSTR_OPEN_DRAIN), MP_ROM_INT(GPIO_MODE_OPEN_DRAIN) },
 };
 STATIC MP_DEFINE_CONST_DICT(machine_led_locals_dict, machine_led_locals_dict_table);
 
 const mp_obj_type_t machine_led_type = {
     { &mp_type_type },
     .name = MP_QSTR_Led,
-    // .print = machine_led_print,
+    .print = machine_led_print,
     .make_new = mp_led_make_new,
     .call = machine_led_call,
     //.protocol = &pin_pin_p,
