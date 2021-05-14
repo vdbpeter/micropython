@@ -83,8 +83,6 @@ mp_obj_t mp_led_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
 
     // get the wanted pin object
     int wanted_pin = mp_obj_get_int(args[0]);
-    printf("'Board' Pin: %u\n", wanted_pin);
-    printf("Pin Array Size: %u\n", MP_ARRAY_SIZE(machine_led_obj));
     const machine_led_obj_t *self = NULL;
     if (0 <= wanted_pin && wanted_pin < MP_ARRAY_SIZE(machine_led_obj)) {
         self = (machine_led_obj_t *)&machine_led_obj[wanted_pin];
@@ -97,7 +95,6 @@ mp_obj_t mp_led_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
     }
 
     // If the previous test is true, we dont get this far...
-    printf("Got 'real' Pin: %lu\n", self->id);
 
     if (n_args > 1 || n_kw > 0) {
         // pin mode given, so configure this GPIO
