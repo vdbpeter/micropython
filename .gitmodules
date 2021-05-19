@@ -24,9 +24,7 @@
 [submodule "lib/asf4"]
 	path = lib/asf4
 	url = https://github.com/adafruit/asf4
-[submodule "lib/tinyusb"]
-	path = lib/tinyusb
-	url = https://github.com/hathach/tinyusb
+	branch = circuitpython
 [submodule "lib/mynewt-nimble"]
 	path = lib/mynewt-nimble
 	url = https://github.com/apache/mynewt-nimble.git
@@ -42,6 +40,6 @@
 [submodule "lib/pico-sdk"]
 	path = lib/pico-sdk
 	url = https://github.com/raspberrypi/pico-sdk.git
-[submodule "ports/samd/peripherals"]
-	path = ports/samd/peripherals
-	url = https://github.com/adafruit/samd-peripherals.git
+[submodule "lib/tinyusb"]
+	path = lib/tinyusb
+	url = https://github.com/hathach/tinyusb
