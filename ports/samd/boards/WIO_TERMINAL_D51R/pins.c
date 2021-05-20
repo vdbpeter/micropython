@@ -29,7 +29,7 @@
 #include "modmachine.h"
 #include "pins.h"
 
-// Ensure Declaration in 'pins.h' reflects # of Pins defined here.
+// Ensure Declaration in "pins.h" reflects # of Pins defined here.
 const machine_pin_obj_t machine_pin_obj[] = {
     {{&machine_pin_type}, PIN_PB08}, // A0/D0
     {{&machine_pin_type}, PIN_PB09}, // A1/D1
@@ -49,9 +49,13 @@ const machine_pin_obj_t machine_pin_obj[] = {
     {{&machine_pin_type}, PIN_PC27}, // BUTTON_2
     {{&machine_pin_type}, PIN_PC28}, // BUTTON_3
     {{&machine_pin_type}, PIN_PD11}, // BUZZER_CTR
+    {{&machine_pin_type}, PIN_PC14}, // 5V_OUTPUT_CTR- enable 5V on hdr
+    {{&machine_pin_type}, PIN_PC15}, // 3V3_OUTPUT_CTR- enable 3V3 on hdr
 };
 
+// Ensure Declaration in 'pins.h' reflects # of Pins defined here.
 const machine_led_obj_t machine_led_obj[] = {
+    {{&machine_led_type}, PIN_PA15}, // USER_LED (Blue)
     {{&machine_led_type}, PIN_PC05}, // LCD_BACKLIGHT_CTR
 };
 

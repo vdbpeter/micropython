@@ -32,13 +32,12 @@
 
 // ASF 4
 #include "hal_flash.h"
+#include "hal_init.h"
+#include "hpl_gclk_base.h"
+
 #if defined(MCU_SAMD21)
-#include "lib/asf4/samd21/hal/include/hal_init.h"
-#include "lib/asf4/samd21/hpl/gclk/hpl_gclk_base.h"
 #include "lib/asf4/samd21/hpl/pm/hpl_pm_base.h"
 #elif defined(MCU_SAMD51)
-#include "lib/asf4/samd51/hal/include/hal_init.h"
-#include "lib/asf4/samd51/hpl/gclk/hpl_gclk_base.h"
 #include "lib/asf4/samd51/hpl/pm/hpl_pm_base.h"
 #include "lib/asf4/samd51/hri/hri_mclk_d51.h"
 #endif
@@ -46,7 +45,7 @@
 
 static struct flash_descriptor flash_desc;
 //STATIC mp_int_t BLOCK_SIZE = 1536; //24x 64B flash pages;
-STATIC mp_int_t BLOCK_SIZE = VFS_BLOCK_SIZE_BYTES;
+STATIC mp_int_t BLOCK_SIZE = VFS_BLOCK_SIZE_BYTES; // Board specific: mpconfigboard.h
 extern const mp_obj_type_t samd_flash_type;
 
 typedef struct _samd_flash_obj_t {
@@ -55,18 +54,14 @@ typedef struct _samd_flash_obj_t {
     uint32_t flash_size;
 } samd_flash_obj_t;
 
-// Build a 64k Flash storage at top. 256k-64k=196k
-// 256*1024=262144 minus 64*1024=65536 = 196608 = 0x30000
+// Build a Flash storage at top. 
 STATIC samd_flash_obj_t samd_flash_obj = {
-//STATIC samd_flash_obj_t = {
     .base = { &samd_flash_type },
-    .flash_base = MICROPY_HW_FLASH_STORAGE_BASE,
-    //.flash_base = 0x30000, // 
-    .flash_size = MICROPY_HW_FLASH_STORAGE_BYTES,
-    //.flash_size = 0xFFC0, // 0xFFFF-64B=FFC0,
+    .flash_base = MICROPY_HW_FLASH_STORAGE_BASE, // Board specific: mpconfigboard.h
+    .flash_size = MICROPY_HW_FLASH_STORAGE_BYTES, // Board specific: mpconfigboard.h
 };
 
-///////////////// FLASH stuff
+// FLASH stuff
 STATIC mp_obj_t samd_flash_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     // No args required. bdev=Flash(). Start Addr & Size defined in samd_flash_obj.
     mp_arg_check_num(n_args, n_kw, 0,0, false);
@@ -93,11 +88,11 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(samd_flash_init_obj, samd_flash_init);
 // Function for ioctl.
 STATIC mp_obj_t eraseblock(uint32_t sector_in) {
     // Destination address aligned with page start to be erased.
-    // Number of pages to be erased.
-    uint32_t DEST_ADDR = sector_in; 
-    // adf4 API call
-    mp_int_t PAGE_SIZE = flash_get_page_size(&flash_desc);
+    uint32_t DEST_ADDR = sector_in; // Number of pages to be erased.
+    mp_int_t PAGE_SIZE = flash_get_page_size(&flash_desc); // adf4 API call
+
     flash_erase(&flash_desc,DEST_ADDR,(BLOCK_SIZE / PAGE_SIZE));
+
     return mp_const_none;
 }
 

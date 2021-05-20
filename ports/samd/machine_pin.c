@@ -34,6 +34,7 @@
 #include "lib/utils/mpirq.h"
 #include "modmachine.h"
 #include "extmod/virtpin.h"
+#include "samd_soc.h"
 
 #include "pins.h" // boards/<BOARD>/
 
@@ -44,25 +45,12 @@
 
 #define GPIO_MODE_IN (0)
 #define GPIO_MODE_OUT (1)
-#define GPIO_MODE_OPEN_DRAIN (2)
-#define GPIO_MODE_ALT (3)
+//#define GPIO_MODE_ALT (3)
+
+#define GPIO_STRENGTH_2MA (0)
+#define GPIO_STRENGTH_8MA (1)
 
 // asf4 hpl_gpio.h gpio_pull_mode
-//#define GPIO_PULL_OFF (0) // 0 = None
-#define GPIO_PULL_UP (1)
-#define GPIO_PULL_DOWN (2)
-
-#define GPIO_IRQ_ALL (0xf)
-
-// Macros to access the state of the hardware.
-#define GPIO_GET_FUNCSEL(id) ((iobank0_hw->io[(id)].ctrl & IO_BANK0_GPIO0_CTRL_FUNCSEL_BITS) >> IO_BANK0_GPIO0_CTRL_FUNCSEL_LSB)
-#define GPIO_IS_OUT(id) (sio_hw->gpio_oe & (1 << (id)))
-#define GPIO_IS_PULL_UP(id) (padsbank0_hw->io[(id)] & PADS_BANK0_GPIO0_PUE_BITS)
-#define GPIO_IS_PULL_DOWN(id) (padsbank0_hw->io[(id)] & PADS_BANK0_GPIO0_PDE_BITS)
-
-// Open drain behaviour is simulated.
-#define GPIO_IS_OPEN_DRAIN(id) (machine_pin_open_drain_mask & (1 << (id)))
-
 
 typedef struct _machine_pin_irq_obj_t {
     mp_irq_obj_t base;
@@ -72,8 +60,6 @@ typedef struct _machine_pin_irq_obj_t {
 
 STATIC const mp_irq_methods_t machine_pin_irq_methods;
 
-// Mask with "1" indicating that the corresponding pin is in simulated open-drain mode.
-uint32_t machine_pin_open_drain_mask;
 
 STATIC void machine_pin_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
@@ -81,15 +67,22 @@ STATIC void machine_pin_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
     mp_printf(print, "Pin(%u)", self->id);
 }
 
-// pin.init(mode, pull=None, *, value=None, alt=FUNC_SIO)
+STATIC void pin_validate_drive(bool strength) {
+    if (strength != GPIO_STRENGTH_2MA && strength != GPIO_STRENGTH_8MA) {
+        mp_raise_ValueError(MP_ERROR_TEXT("invalid argument(s) value"));
+    }
+}
+
+
+// pin.init(mode, pull=None, *, value=None, drive=0). No 'alt' yet.
 STATIC mp_obj_t machine_pin_obj_init_helper(const machine_pin_obj_t *self, size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_mode, ARG_pull, ARG_value, ARG_alt };
+    enum { ARG_mode, ARG_pull, ARG_value, ARG_drive, ARG_alt };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_mode, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE}},
         { MP_QSTR_pull, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE}},
         { MP_QSTR_value, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE}},
+        { MP_QSTR_drive, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = GPIO_STRENGTH_2MA} },
     };
-        //{ MP_QSTR_alt, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = GPIO_FUNC_SIO}},
 
     // parse args
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -104,20 +97,28 @@ STATIC mp_obj_t machine_pin_obj_init_helper(const machine_pin_obj_t *self, size_
     if (args[ARG_mode].u_obj != mp_const_none) {
         mp_int_t mode = mp_obj_get_int(args[ARG_mode].u_obj);
         if (mode == GPIO_MODE_IN) {
-            mp_hal_pin_input(self->id);
+            gpio_set_pin_direction(self->id, GPIO_DIRECTION_IN);
         } else if (mode == GPIO_MODE_OUT) {
-            mp_hal_pin_output(self->id);
-        } else if (mode == GPIO_MODE_OPEN_DRAIN) {
-            mp_hal_pin_open_drain(self->id);
+            gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
+        } 
+    else {
+        gpio_set_pin_direction(self->id, GPIO_DIRECTION_IN); // If no args are given, the Pin is 'input'.
         }
     }
-    // configure pull (unconditionally because None means no-pull)
+    // configure pull. Only to be used with IN mode. The function sets the pin to INPUT.
     uint32_t pull = 0;
-    if (args[ARG_pull].u_obj != mp_const_none) {
+    mp_int_t mode = mp_obj_get_int(args[ARG_mode].u_obj);
+    if (mode == GPIO_MODE_OUT && args[ARG_pull].u_obj != mp_const_none) {
+        printf("PULL ignored. Only to be used with IN mode.\n");
+    } else if (args[ARG_pull].u_obj != mp_const_none) {
         pull = mp_obj_get_int(args[ARG_pull].u_obj);
         printf("Pull: (%lu)\n", pull);
-        gpio_set_pin_pull_mode(self->id, pull);
+        gpio_set_pin_pull_mode(self->id, pull); // hal_gpio.h
     }
+
+    // get the strength
+    bool strength = args[3].u_int;
+    pin_validate_drive(strength);
 
     return mp_const_none;
 }
@@ -128,9 +129,6 @@ mp_obj_t mp_pin_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
 
     // get the wanted pin object
     int wanted_pin = mp_obj_get_int(args[0]);
-    printf("'MCU': %s\n",MICROPY_HW_MCU_NAME );
-    printf("'Board' Pin: %u\n", wanted_pin);
-    printf("Pin Array Size: %u\n", MP_ARRAY_SIZE(machine_pin_obj));
 
     const machine_pin_obj_t *self = NULL;
     if (0 <= wanted_pin && wanted_pin < MP_ARRAY_SIZE(machine_pin_obj)) {
@@ -141,8 +139,6 @@ mp_obj_t mp_pin_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
         mp_raise_ValueError(MP_ERROR_TEXT("invalid pin"));
     }
         self = (machine_pin_obj_t *)&machine_pin_obj[wanted_pin];
-
-    printf("Got 'real' Pin: %lu\n\n", self->id);
 
     if (n_args > 1 || n_kw > 0) {
         // pin mode given, so configure this GPIO
@@ -165,13 +161,8 @@ STATIC mp_obj_t machine_pin_call(mp_obj_t self_in, size_t n_args, size_t n_kw, c
     } else {
         // set pin
         bool value = mp_obj_is_true(args[0]);
-        if (GPIO_IS_OPEN_DRAIN(self->id)) {
-            // PvdB. Creates compilation error. Don't know what it does (see RP2)
-            //MP_STATIC_ASSERT(GPIO_DIRECTION_IN == 0 && GPIO_DIRECTION_OUT == 1);
-            gpio_set_pin_direction(self->id, 1 - value);
-        } else {
-            gpio_set_pin_level(self->id, value);
-        }
+        gpio_set_pin_level(self->id, value);
+
         return mp_const_none;
     }
 }
@@ -182,52 +173,82 @@ STATIC mp_obj_t machine_pin_obj_init(size_t n_args, const mp_obj_t *args, mp_map
 }
 MP_DEFINE_CONST_FUN_OBJ_KW(machine_pin_init_obj, 1, machine_pin_obj_init);
 
+
 // pin.value([value])
 STATIC mp_obj_t machine_pin_value(size_t n_args, const mp_obj_t *args) {
     return machine_pin_call(args[0], n_args - 1, 0, args + 1);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(machine_pin_value_obj, 1, 2, machine_pin_value);
 
-// pin.low()
+
+// pin.disable(pin)
+STATIC mp_obj_t machine_pin_disable(mp_obj_t self_in) {
+    machine_pin_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    gpio_set_pin_direction(self->id, GPIO_DIRECTION_OFF); // Disables the pin (low power state)
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_pin_disable_obj, machine_pin_disable);
+
+
+// pin.low() Totem-pole (push-pull)
 STATIC mp_obj_t machine_pin_low(mp_obj_t self_in) {
     machine_pin_obj_t *self = MP_OBJ_TO_PTR(self_in);
     gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
-/*
-    if (GPIO_IS_OPEN_DRAIN(self->id)) {
-        gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
-    } else {
-        gpio_clr_mask(1u << self->id);
-    }
-*/
+    gpio_set_pin_level(self->id, false);
+
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_pin_low_obj, machine_pin_low);
 
-// pin.high()
+// pin.high() Totem-pole (push-pull)
 STATIC mp_obj_t machine_pin_high(mp_obj_t self_in) {
     machine_pin_obj_t *self = MP_OBJ_TO_PTR(self_in);
-    gpio_set_pin_direction(self->id, GPIO_DIRECTION_IN);
-/*
-    if (GPIO_IS_OPEN_DRAIN(self->id)) {
-        gpio_set_pin_direction(self->id, GPIO_DIRECTION_IN);
-    } else {
-        gpio_set_mask(1u << self->id);
-    }
-*/
+    gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
+    gpio_set_pin_level(self->id, true);
+
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_pin_high_obj, machine_pin_high);
 
-// pin.toggle()
+// pin.toggle(). Only TOGGLE pins set as OUTPUT.
 STATIC mp_obj_t machine_pin_toggle(mp_obj_t self_in) {
     machine_pin_obj_t *self = MP_OBJ_TO_PTR(self_in);
-    gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
-    gpio_toggle_pin_level(self->id);
 
-    return mp_const_none;
+    // Determine DIRECTION of PIN.
+    bool pin_dir;
+
+    pin_dir = (PORT->Group[(enum gpio_port)GPIO_PORT(self->id)].DIR.reg // Get PORT# 
+                   & (1 << GPIO_PIN(self->id))) // Isolate the Pin in question
+                   >> GPIO_PIN(self->id); // Shift to LSB for binary result.
+
+    if (pin_dir) {
+        // Pin is OUTPUT
+        gpio_set_pin_direction(self->id, GPIO_DIRECTION_OUT);
+        gpio_toggle_pin_level(self->id);
+    } else {
+        mp_raise_ValueError(MP_ERROR_TEXT("Cannot TOGGLE INPUT pin!\n"));
+        }
+    return mp_const_true;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(machine_pin_toggle_obj, machine_pin_toggle);
 
+// Pin.drive(). Normal (0) is 2mA, High (1) allows 8mA.
+STATIC mp_obj_t machine_pin_drive(size_t n_args, const mp_obj_t *args) {
+    machine_pin_obj_t *self = args[0]; // Pin
+    if (n_args == 1) {
+        return mp_const_none;
+    } else {
+        bool strength = mp_obj_get_int(args[1]); // 0 or 1
+        pin_validate_drive(strength);
+        // Set the DRVSTR bit (ASF hri/hri_port_dxx.h
+        hri_port_write_PINCFG_DRVSTR_bit(PORT, 
+                                        (enum gpio_port)GPIO_PORT(self->id), 
+                                        GPIO_PIN(self->id),
+                                        strength);
+        return mp_const_none;
+    }
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(machine_pin_drive_obj, 1, 2, machine_pin_drive);
 
 STATIC const mp_rom_map_elem_t machine_pin_locals_dict_table[] = {
     // instance methods
@@ -238,16 +259,21 @@ STATIC const mp_rom_map_elem_t machine_pin_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_off), MP_ROM_PTR(&machine_pin_low_obj) },
     { MP_ROM_QSTR(MP_QSTR_on), MP_ROM_PTR(&machine_pin_high_obj) },
     { MP_ROM_QSTR(MP_QSTR_toggle), MP_ROM_PTR(&machine_pin_toggle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_disable), MP_ROM_PTR(&machine_pin_disable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_drive), MP_ROM_PTR(&machine_pin_drive_obj) },
+
 
     //{ MP_ROM_QSTR(MP_QSTR_irq), MP_ROM_PTR(&machine_pin_irq_obj) },
 
     // class constants
     { MP_ROM_QSTR(MP_QSTR_IN), MP_ROM_INT(GPIO_MODE_IN) },
     { MP_ROM_QSTR(MP_QSTR_OUT), MP_ROM_INT(GPIO_MODE_OUT) },
-    //{ MP_ROM_QSTR(MP_QSTR_OPEN_DRAIN), MP_ROM_INT(GPIO_MODE_OPEN_DRAIN) },
     //{ MP_ROM_QSTR(MP_QSTR_ALT), MP_ROM_INT(GPIO_MODE_ALT) },
+    { MP_ROM_QSTR(MP_QSTR_PULL_OFF), MP_ROM_INT(GPIO_PULL_OFF) },
     { MP_ROM_QSTR(MP_QSTR_PULL_UP), MP_ROM_INT(GPIO_PULL_UP) },
     { MP_ROM_QSTR(MP_QSTR_PULL_DOWN), MP_ROM_INT(GPIO_PULL_DOWN) },
+    { MP_ROM_QSTR(MP_QSTR_LOW_POWER), MP_ROM_INT(GPIO_STRENGTH_2MA) },
+    { MP_ROM_QSTR(MP_QSTR_HIGH_POWER), MP_ROM_INT(GPIO_STRENGTH_8MA) },
     //{ MP_ROM_QSTR(MP_QSTR_IRQ_RISING), MP_ROM_INT(GPIO_IRQ_EDGE_RISE) },
     //{ MP_ROM_QSTR(MP_QSTR_IRQ_FALLING), MP_ROM_INT(GPIO_IRQ_EDGE_FALL) },
 };
